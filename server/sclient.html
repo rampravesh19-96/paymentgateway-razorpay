@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Razorpay Web-Integration</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+
+<body>
+    <hr/>
+
+    <div style="display:inline-block">
+        <img src="https://cdn.pixabay.com/photo/2014/04/03/10/55/t-shirt-311732_960_720.png" alt="" width="100px" height="100px">
+        <p>Shirt</p>
+        <p><b>Amount:- Rs. 1</b></p>
+        <form class="pay-form" data-name="Shirt" data-amount="1" data-description="Shirt Buying">
+            <input type="hidden" name="name" value="Shirt">
+            <input type="hidden" name="amount" value="1">
+            <input type="hidden" name="description" value="Shirt Buying">
+            <input type="submit" value="Pay Now">
+        </form>
+    </div>
+
+    <div style="display:inline-block">
+        <img src="https://cdn.pixabay.com/photo/2013/07/12/18/20/shoes-153310_960_720.png" alt="" width="100px" height="100px">
+        <p>Shoes</p>
+        <p><b>Amount:- Rs. 1500</b></p>
+        <form class="pay-form" data-name="Shoes" data-amount="1500" data-description="Shoes Buying">
+            <input type="hidden" name="name" value="Shoes">
+            <input type="hidden" name="amount" value="1500">
+            <input type="hidden" name="description" value="Shoes Buying">
+            <input type="submit" value="Pay Now">
+        </form>
+    </div>
+
+    <!-- Inside index.html -->
+<!-- Inside index.html -->
+<script>
+
+	document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.pay-form').forEach(function (form) {
+        form.addEventListener('submit', handlePaymentFormSubmit);
+    });
+});
+
+async function handlePaymentFormSubmit(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const additionalData = {
+        name: this.dataset.name,
+        amount: this.dataset.amount,
+        description: this.dataset.description
+    };
+
+    try {
+        const paymentResponse = await makeApiCall({ ...Object.fromEntries(formData.entries()), ...additionalData });
+
+        if (paymentResponse.success) {
+            const options = buildRazorpayOptions(paymentResponse);
+            setupRazorpay(options);
+        } else {
+            alert(paymentResponse.msg);
+        }
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+async function makeApiCall(formData) {
+    try {
+        const response = await fetch("http://localhost:3000/createOrder", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
+        });
+
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        console.error('Error:', error);
+        throw new Error('Something went wrong!');
+    }
+}
+
+function buildRazorpayOptions(paymentResponse) {
+    return {
+        key: `${paymentResponse.key_id}`,
+        amount: `${paymentResponse.amount}`,
+        currency: 'INR',
+        name: `${paymentResponse.product_name}`,
+        description: `${paymentResponse.description}`,
+        image: 'https://dummyimage.com/600x400/000/fff',
+        order_id: `${paymentResponse.order_id}`,
+        handler: function (response) {
+            alert("Payment Succeeded");
+        },
+        prefill: {
+            contact: `${paymentResponse.contact}`,
+            name: `${paymentResponse.name}`,
+            email: `${paymentResponse.email}`,
+        },
+        notes: {
+            description: `${paymentResponse.description}`,
+        },
+        theme: {
+            color: "#2300a3",
+        },
+    };
+}
+
+function setupRazorpay(options) {
+    const razorpayObject = new Razorpay(options);
+
+    razorpayObject.on('payment.failed', function (response) {
+        alert("Payment Failed");
+    });
+
+    razorpayObject.open();
+}
+
+</script>
+
+
+</body>
+
+</html>
